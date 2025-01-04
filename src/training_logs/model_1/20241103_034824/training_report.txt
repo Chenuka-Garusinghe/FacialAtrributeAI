@@ -1,0 +1,18 @@
+Training Report for model_1
+        
+Training Session Summary
+-----------------------
+Start Time: 2024-11-03 03:48:24
+Total Training Time: 6061.65 seconds
+Epochs Completed: 10
+
+Performance Metrics
+------------------
+Best Validation Loss: 0.1938 (Epoch 4)
+Final Training Loss: 0.0962
+Final Validation Loss: 0.2604
+
+Training Statistics
+------------------
+Average Epoch Time: 606.16 seconds
+Average Batch Loss: 0.1561

@@ -1,0 +1,15 @@
+# PyTorch packages
+torch
+torchvision
+torchaudio
+-f https://download.pytorch.org/whl/cpu
+
+# Other required libraries
+albumentations
+pandas
+numpy
+opencv-python-headless
+tqdm
+matplotlib
+jsonlib-python3
+seaborn

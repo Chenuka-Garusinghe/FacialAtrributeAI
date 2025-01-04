@@ -1,0 +1,10 @@
+Training Report for model_final
+        =======================================
+        Training completed at: 2024-11-03 09:35:38
+        Total epochs: 6
+        Total training time: 9284.46 seconds
+        Best validation loss: 0.0217 (Epoch 1)
+        Final training loss: 0.0228
+        Final validation loss: 0.0217
+        Average epoch time: 1547.39 seconds
+        

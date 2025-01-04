@@ -4,38 +4,64 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
-import torchvision.transforms as transforms
 from tqdm import tqdm
 import os
 import torch.nn as nn
 import torchvision.models as models
-from torchvision.models import ResNet18_Weights
+from torchvision.models import ResNet18_Weights, EfficientNet_B0_Weights
 import torch.multiprocessing as mp
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+import json
+import logging
+import torch.nn.functional as F
 
-# Device setup
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-print(f"Using device: {device}")
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('evaluation.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
-# Custom dataset class
+# Device setup with support for CUDA, MPS, and CPU
+device = torch.device("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
+logger.info(f"Using device: {device}")
+
 class OptimizedCelebADataset(Dataset):
     def __init__(self, data, img_folder, transform=None):
         self.data = data
         self.img_folder = img_folder
         self.transform = transform
-        print("Preparing image paths...")
         self.image_paths = [os.path.join(img_folder, img_name) for img_name in tqdm(self.data['image_id'], desc="Loading image paths")]
+        
+        # Get attribute names (excluding 'image_id' and 'partition')
+        self.attribute_names = self.data.columns.tolist()
+        self.attribute_names.remove('image_id')
+        if 'partition' in self.attribute_names:
+            self.attribute_names.remove('partition')
         
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, idx):
-        image = Image.open(self.image_paths[idx])
+        image_path = self.image_paths[idx]
+        image = Image.open(image_path).convert('RGB')
+
+        # Convert to numpy array and apply transformations
+        image = np.array(image)
         if self.transform:
-            image = self.transform(image)
-        labels = self.data.iloc[idx][1:-1].values.astype('float32')
+            augmented = self.transform(image=image)
+            image = augmented['image']
+        
+        # Get labels using attribute names
+        labels = self.data.iloc[idx][self.attribute_names].values.astype('float32')
         return image, torch.tensor(labels)
 
-# Model class
+# Original Model (Model 1)
 class OptimizedFacialAttributeModel(nn.Module):
     def __init__(self, num_classes=40):
         super().__init__()
@@ -45,88 +71,180 @@ class OptimizedFacialAttributeModel(nn.Module):
     def forward(self, x):
         return self.base_model(x)
 
-# Function to load the trained model
-def load_model(model_path):
-    print("Loading model weights...")
-    model = OptimizedFacialAttributeModel(num_classes=40)
-    model.load_state_dict(torch.load(model_path, map_location=device))
+# Final Model with Attention
+class ImprovedAttributeModel(nn.Module):
+    def __init__(self, num_attributes=40):
+        super().__init__()
+        self.backbone = models.efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
+        backbone_features = self.backbone.classifier[1].in_features
+        self.backbone.classifier = nn.Identity()
+        
+        self.shared_features = nn.Sequential(
+            nn.Linear(backbone_features, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Dropout(0.3)
+        )
+        
+        self.classifier = nn.Sequential(
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(256, num_attributes)
+        )
+    
+    def forward(self, x):
+        x = self.backbone(x)
+        shared = self.shared_features(x)
+        return self.classifier(shared)
+
+def load_attributes(attr_file):
+    """Load attribute data with proper column names"""
+    logger.info("Loading attributes...")
+    with open(attr_file, 'r') as f:
+        _ = f.readline()  # Skip the number of images
+        attribute_names = f.readline().strip().split()
+    
+    # Read attributes with correct column names
+    attributes = pd.read_csv(attr_file, sep=r"\s+", skiprows=2, names=['image_id'] + attribute_names)
+    attributes['image_id'] = attributes['image_id'].str.strip()
+    # Replace -1 with 0 for binary labels
+    attributes[attribute_names] = attributes[attribute_names].replace(-1, 0)
+    return attributes, attribute_names
+
+def load_model(model_path, model_type='final'):
+    logger.info(f"Loading {model_type} model from {model_path}")
+    if model_type == 'final':
+        model = ImprovedAttributeModel(num_attributes=40)
+    else:
+        model = OptimizedFacialAttributeModel(num_classes=40)
+    
+    checkpoint = torch.load(model_path, map_location=device)
+    if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+        model.load_state_dict(checkpoint['model_state_dict'])
+    else:
+        model.load_state_dict(checkpoint)
+    
     model = model.to(device)
     model.eval()
     return model
 
-# Function to evaluate the model
-def evaluate_model(model, test_loader):
+def evaluate_model(model, test_loader, threshold=0.5):
     all_labels = []
     all_preds = []
+    all_probs = []
     
-    total_batches = len(test_loader)
-    print(f"\nStarting evaluation on {len(test_loader.dataset)} images...")
+    logger.info(f"\nStarting evaluation on {len(test_loader.dataset)} images...")
     
     with torch.no_grad():
-        for images, labels in tqdm(test_loader, desc="Evaluating batches", total=total_batches):
-            images, labels = images.to(device), labels.to(device)
-            outputs = model(images)
-            preds = torch.sigmoid(outputs).cpu().numpy()
+        for images, labels in tqdm(test_loader, desc="Evaluating batches"):
+            images = images.to(device)
+            labels = labels.to(device)
+            
+            with torch.amp.autocast(device_type=device.type, dtype=torch.float16):
+                outputs = model(images)
+                probabilities = torch.sigmoid(outputs)
             
             all_labels.append(labels.cpu().numpy())
-            all_preds.append(preds)
+            all_probs.append(probabilities.cpu().numpy())
+            all_preds.append((probabilities > threshold).cpu().numpy())
     
-    print("\nCalculating metrics...")
+    logger.info("Calculating metrics...")
     all_labels = np.vstack(all_labels)
-    all_preds = np.vstack(all_preds) > 0.5
+    all_probs = np.vstack(all_probs)
+    all_preds = np.vstack(all_preds)
     
     metrics = {}
-    for i, attr in enumerate(tqdm(test_loader.dataset.data.columns[1:-1], desc="Processing attributes")):
-        acc = accuracy_score(all_labels[:, i], all_preds[:, i])
-        precision, recall, f1, _ = precision_recall_fscore_support(all_labels[:, i], all_preds[:, i], average='binary')
-        metrics[attr] = {"accuracy": acc, "precision": precision, "recall": recall, "f1": f1}
+    attribute_names = test_loader.dataset.attribute_names
+    
+    for i, attr in enumerate(tqdm(attribute_names, desc="Processing attributes")):
+        true_labels = all_labels[:, i]
+        pred_labels = all_preds[:, i]
+        probabilities = all_probs[:, i]
+        
+        acc = accuracy_score(true_labels, pred_labels)
+        precision, recall, f1, _ = precision_recall_fscore_support(
+            true_labels, pred_labels, average='binary', zero_division=0)
+        
+        metrics[attr] = {
+            "accuracy": float(acc),
+            "precision": float(precision),
+            "recall": float(recall),
+            "f1": float(f1),
+            "avg_confidence": float(np.mean(probabilities))
+        }
+    
+    # Add aggregate metrics
+    metrics["overall"] = {
+        "accuracy": float(np.mean([m["accuracy"] for m in metrics.values() if isinstance(m, dict)])),
+        "precision": float(np.mean([m["precision"] for m in metrics.values() if isinstance(m, dict)])),
+        "recall": float(np.mean([m["recall"] for m in metrics.values() if isinstance(m, dict)])),
+        "f1": float(np.mean([m["f1"] for m in metrics.values() if isinstance(m, dict)]))
+    }
     
     return metrics
 
-if __name__ == '__main__':
-    # Paths to data files (update as necessary)
+def main():
+    # Data paths
     attr_file = '../Anno/list_attr_celeba.txt'
     partition_file = '../Eval/list_eval_partition.txt'
     img_folder = '../img_align_celeba'
-    
-    # Load and preprocess attributes
-    print("Loading attributes...")
-    attributes = pd.read_csv(attr_file, sep="\s+", skiprows=1).replace(-1, 0)
-    attributes.reset_index(inplace=True)
-    attributes.rename(columns={'index': 'image_id'}, inplace=True)
-    attributes['image_id'] = attributes['image_id'].str.strip()
+    models_to_evaluate = {
+        'model_1': {'path': './model_1.pth', 'type': 'original'},
+        'final_model': {'path': './final_model.pth', 'type': 'final'}
+    }
+
+    # Load attributes and partitions
+    logger.info("Loading datasets...")
+    attributes, attribute_names = load_attributes(attr_file)
     
     # Load partitions
-    print("Loading partitions...")
-    partitions = pd.read_csv(partition_file, sep="\s+", header=None, names=["image_id", "partition"])
+    partitions = pd.read_csv(partition_file, sep=r"\s+", header=None, 
+                           names=["image_id", "partition"])
     partitions['image_id'] = partitions['image_id'].str.strip()
     
-    # Merge attributes and partitions with progress bar
-    print("Merging datasets...")
+    # Merge data
     data = attributes.merge(partitions, on="image_id")
-    
-    # Define transformations for evaluation
-    transform = transforms.Compose([
-        transforms.Resize((128, 128)),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ])
-    
-    # Prepare test dataset and loader
-    print("\nPreparing test dataset...")
     test_data = data[data['partition'] == 2].reset_index(drop=True)
+
+    # Define transforms for evaluation
+    transform = A.Compose([
+        A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ToTensorV2()
+    ])
+
+    # Create test dataset and loader
     test_dataset = OptimizedCelebADataset(test_data, img_folder, transform=transform)
+    test_loader = DataLoader(test_dataset, batch_size=64, num_workers=4, pin_memory=True)
+
+    # Evaluate each model
+    all_results = {}
+    for model_name, model_info in models_to_evaluate.items():
+        logger.info(f"\nEvaluating {model_name}...")
+        try:
+            model = load_model(model_info['path'], model_info['type'])
+            metrics = evaluate_model(model, test_loader)
+            
+            # Save individual model results
+            with open(f'{model_name}_evaluation_metrics.json', 'w') as f:
+                json.dump(metrics, f, indent=4)
+            
+            all_results[model_name] = metrics
+            
+            # Display summary metrics
+            logger.info(f"\n{model_name} Overall Metrics:")
+            overall = metrics['overall']
+            logger.info(f"Accuracy: {overall['accuracy']:.4f}")
+            logger.info(f"Precision: {overall['precision']:.4f}")
+            logger.info(f"Recall: {overall['recall']:.4f}")
+            logger.info(f"F1 Score: {overall['f1']:.4f}")
+            
+        except Exception as e:
+            logger.error(f"Error evaluating {model_name}: {str(e)}")
     
-    print("\nInitializing data loader...")
-    test_loader = DataLoader(test_dataset, batch_size=64, num_workers=mp.cpu_count(), pin_memory=True)
-    
-    # Load the model
-    model = load_model('optimized_model.pth')
-    
-    # Evaluate the model
-    metrics = evaluate_model(model, test_loader)
-    
-    # Display metrics for each attribute
-    print("\nEvaluation Metrics:")
-    for attr, metric in metrics.items():
-        print(f"{attr}: Accuracy={metric['accuracy']:.2f}, Precision={metric['precision']:.2f}, Recall={metric['recall']:.2f}, F1={metric['f1']:.2f}")
+    # Save comparative results
+    with open('comparative_evaluation_metrics.json', 'w') as f:
+        json.dump(all_results, f, indent=4)
+
+if __name__ == '__main__':
+    main()

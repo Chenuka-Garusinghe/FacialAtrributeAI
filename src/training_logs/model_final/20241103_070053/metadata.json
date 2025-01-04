@@ -1,0 +1,8 @@
+{
+    "model_name": "model_final",
+    "start_time": 1730577653.7913249,
+    "epochs_completed": 6,
+    "total_training_time": 9284.464204072952,
+    "best_val_loss": 0.021685965023274967,
+    "best_epoch": 0
+}

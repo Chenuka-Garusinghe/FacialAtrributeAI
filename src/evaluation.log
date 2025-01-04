@@ -1,0 +1,107 @@
+2024-11-03 13:21:57,701 - INFO - Using device: mps
+2024-11-03 13:21:57,702 - INFO - Loading datasets...
+2024-11-03 13:24:18,468 - INFO - Using device: mps
+2024-11-03 13:24:18,468 - INFO - Loading datasets...
+2024-11-03 13:24:18,468 - INFO - Loading attributes...
+2024-11-03 13:24:18,852 - INFO - 
+Evaluating model_1...
+2024-11-03 13:24:18,852 - INFO - Loading original model from ./model_1.pth
+2024-11-03 13:24:19,113 - INFO - 
+Starting evaluation on 19962 images...
+2024-11-03 13:24:20,675 - INFO - Using device: mps
+2024-11-03 13:24:22,216 - INFO - Using device: mps
+2024-11-03 13:24:23,767 - INFO - Using device: mps
+2024-11-03 13:24:25,272 - INFO - Using device: mps
+2024-11-03 13:24:58,852 - INFO - Calculating metrics...
+2024-11-03 13:24:58,990 - INFO - 
+model_1 Overall Metrics:
+2024-11-03 13:24:58,990 - INFO - Accuracy: 0.8814
+2024-11-03 13:24:58,990 - INFO - Precision: 0.6753
+2024-11-03 13:24:58,990 - INFO - Recall: 0.6450
+2024-11-03 13:24:58,990 - INFO - F1 Score: 0.6339
+2024-11-03 13:24:58,990 - INFO - 
+Evaluating final_model...
+2024-11-03 13:24:58,990 - INFO - Loading final model from ./final_model.pth
+2024-11-03 13:24:59,305 - INFO - 
+Starting evaluation on 19962 images...
+2024-11-03 13:25:01,281 - INFO - Using device: mps
+2024-11-03 13:25:02,808 - INFO - Using device: mps
+2024-11-03 13:25:04,341 - INFO - Using device: mps
+2024-11-03 13:25:05,867 - INFO - Using device: mps
+2024-11-03 13:26:13,629 - INFO - Calculating metrics...
+2024-11-03 13:26:13,755 - INFO - 
+final_model Overall Metrics:
+2024-11-03 13:26:13,755 - INFO - Accuracy: 0.8892
+2024-11-03 13:26:13,755 - INFO - Precision: 0.8560
+2024-11-03 13:26:13,755 - INFO - Recall: 0.3908
+2024-11-03 13:26:13,755 - INFO - F1 Score: 0.4740
+2024-11-03 22:36:17,179 - INFO - Using device: mps
+2024-11-03 22:36:17,179 - INFO - Loading datasets...
+2024-11-03 22:36:17,179 - INFO - Loading attributes...
+2024-11-03 22:36:17,571 - INFO - 
+Evaluating model_1...
+2024-11-03 22:36:17,572 - INFO - Loading original model from ./model_1.pth
+2024-11-03 22:36:17,847 - INFO - 
+Starting evaluation on 19962 images...
+2024-11-03 22:36:19,631 - INFO - Using device: mps
+2024-11-03 22:36:21,206 - INFO - Using device: mps
+2024-11-03 22:36:22,758 - INFO - Using device: mps
+2024-11-03 22:36:24,293 - INFO - Using device: mps
+2024-11-03 22:36:57,863 - INFO - Calculating metrics...
+2024-11-03 22:36:57,995 - INFO - 
+model_1 Overall Metrics:
+2024-11-03 22:36:57,995 - INFO - Accuracy: 0.8814
+2024-11-03 22:36:57,995 - INFO - Precision: 0.6753
+2024-11-03 22:36:57,995 - INFO - Recall: 0.6450
+2024-11-03 22:36:57,995 - INFO - F1 Score: 0.6339
+2024-11-03 22:36:57,995 - INFO - 
+Evaluating final_model...
+2024-11-03 22:36:57,995 - INFO - Loading final model from ./final_model.pth
+2024-11-03 22:36:58,302 - INFO - 
+Starting evaluation on 19962 images...
+2024-11-03 22:36:59,897 - INFO - Using device: mps
+2024-11-03 22:37:01,678 - INFO - Using device: mps
+2024-11-03 22:37:03,311 - INFO - Using device: mps
+2024-11-03 22:37:04,837 - INFO - Using device: mps
+2024-11-03 22:38:13,976 - INFO - Calculating metrics...
+2024-11-03 22:38:14,117 - INFO - 
+final_model Overall Metrics:
+2024-11-03 22:38:14,117 - INFO - Accuracy: 0.8892
+2024-11-03 22:38:14,117 - INFO - Precision: 0.8560
+2024-11-03 22:38:14,117 - INFO - Recall: 0.3908
+2024-11-03 22:38:14,117 - INFO - F1 Score: 0.4740
+2024-11-03 23:23:35,187 - INFO - Using device: mps
+2024-11-03 23:23:35,188 - INFO - Loading datasets...
+2024-11-03 23:23:35,188 - INFO - Loading attributes...
+2024-11-03 23:23:35,570 - INFO - 
+Evaluating model_1...
+2024-11-03 23:23:35,570 - INFO - Loading original model from ./model_1.pth
+2024-11-03 23:23:35,844 - INFO - 
+Starting evaluation on 19962 images...
+2024-11-03 23:23:37,335 - INFO - Using device: mps
+2024-11-03 23:23:38,891 - INFO - Using device: mps
+2024-11-03 23:23:40,361 - INFO - Using device: mps
+2024-11-03 23:23:41,846 - INFO - Using device: mps
+2024-11-03 23:24:15,636 - INFO - Calculating metrics...
+2024-11-03 23:24:15,755 - INFO - 
+model_1 Overall Metrics:
+2024-11-03 23:24:15,755 - INFO - Accuracy: 0.8814
+2024-11-03 23:24:15,755 - INFO - Precision: 0.6753
+2024-11-03 23:24:15,755 - INFO - Recall: 0.6450
+2024-11-03 23:24:15,755 - INFO - F1 Score: 0.6339
+2024-11-03 23:24:15,755 - INFO - 
+Evaluating final_model...
+2024-11-03 23:24:15,755 - INFO - Loading final model from ./final_model.pth
+2024-11-03 23:24:16,056 - INFO - 
+Starting evaluation on 19962 images...
+2024-11-03 23:24:17,624 - INFO - Using device: mps
+2024-11-03 23:24:19,126 - INFO - Using device: mps
+2024-11-03 23:24:20,713 - INFO - Using device: mps
+2024-11-03 23:24:22,251 - INFO - Using device: mps
+2024-11-03 23:25:31,286 - INFO - Calculating metrics...
+2024-11-03 23:25:31,416 - INFO - 
+final_model Overall Metrics:
+2024-11-03 23:25:31,417 - INFO - Accuracy: 0.8892
+2024-11-03 23:25:31,417 - INFO - Precision: 0.8560
+2024-11-03 23:25:31,417 - INFO - Recall: 0.3908
+2024-11-03 23:25:31,417 - INFO - F1 Score: 0.4740
