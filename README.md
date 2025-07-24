@@ -1,5 +1,5 @@
 # FacialAtrributeAI
-COMP3419 Assignment, making a facial atrribute analyzer AI based on previous research articles using CelebA dataset, preweighted training via ImageNet and EfficientNet as backbone model. 
+Making a facial atrribute analyzer AI based on previous research articles using CelebA dataset, preweighted training via ImageNet and EfficientNet as backbone model. 
 
 Inorder to run the model, do `python3 model_final.py` while being in the `src` directory. Make sure to install all needed libraries via pip, then training should begin as normal where a loading bar should show metrics of EST of training per epoch
 
